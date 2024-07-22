@@ -75,12 +75,19 @@ fn dir(d: &Path) {
 }
 
 fn dispatch(p: &Path) {
+    // ignore symlinks. Either they point outside the tree we're traversing (in which case the
+    // target isn't relevant) or they don't (in which case we'll process the target sooner or later
+    // anyway)
+    if p.is_symlink() {
+        return;
+    }
+
     if p.is_dir() {
         dir(&p);
     } else if p.is_file() {
         file(&p);
     } else {
-        eprint!("Ignoring item, since it's neither a file nor a directory: {}\n", p.display());
+        eprint!("Ignoring item, since it's none of file, directory, symlink: {}\n", p.display());
     }
 }
 
