@@ -1,6 +1,6 @@
 use std::env::args;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::process::exit;
@@ -10,7 +10,6 @@ const CHUNK_SIZE: usize = 1024 * 1024 * 10;
 
 // print hash and inode number of file
 fn file(f: &Path) {
-    std::io::stdout().flush().unwrap();
     if !f.is_file() {
         eprint!("Not a file: {}", f.display());
         exit(1);
@@ -93,16 +92,21 @@ fn dispatch(p: &Path) {
 
 fn main() {
 
-    // get arg
-    let arg: String = match args().skip(1).next() {
-        Some(s) => s,
-        None => {
-            eprint!("Need arg: File or directory to recurse into\n");
-            exit(1);
-        },
-    };
+    // process all arguments
+    let mut args = args().skip(1);
+    let mut processed = 0;
+    loop {
+        match args.next() {
+            // arg is either a file or a dir to recurse into
+            Some(arg) => dispatch(&Path::new(&arg)),
+            None => break,
+        };
+        processed += 1;
+    }
 
-    // arg is either a file or a dir to recurse into
-    let f_or_d = Path::new(&arg);
-    dispatch(&f_or_d);
+    // if no arguments were processed, user is stoopid
+    if processed == 0 {
+        eprint!("Need arg(s): File or directory to recurse into\n");
+        exit(1);
+    }
 }
