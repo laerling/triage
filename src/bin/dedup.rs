@@ -4,6 +4,7 @@ use std::io::{Read, Result};
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::process::exit;
+use std::thread;
 use xxhash_rust::xxh64::Xxh64;
 
 const CHUNK_SIZE: usize = 1024 * 1024 * 10;
@@ -62,19 +63,36 @@ fn dir(d: &Path) {
     }
 
     // recurse
+    let mut threads = Vec::new();
     for entry in d.read_dir()
         .unwrap_or_else(|_| panic!("Can't read directory: {:?}", d))
     {
+        // get entry
         let entry = entry.unwrap_or_else(
             |_| panic!("Can't read entry from directory {:?}", d));
-        dispatch(&entry.path());
+        let path = entry.path();
+
+        // start thread
+        let p = path.to_path_buf();
+        let handle = thread::spawn(move || dispatch(&p));
+        threads.push((path, handle));
+    }
+
+    // await threads for subdirectories
+    for (path, handle) in threads {
+        match handle.join() {
+            Ok(_) => {},
+            Err(e) => eprintln!(
+                "Cannot join handle of thread for {}: {:?}",
+                path.display(), e),
+        };
     }
 }
 
 fn dispatch(p: &Path) {
-    // ignore symlinks. Either they point outside the tree we're traversing (in which case the
-    // target isn't relevant) or they don't (in which case we'll process the target sooner or later
-    // anyway)
+    // Silently ignore symlinks. Either they point outside the tree we're traversing (in which case
+    // the target isn't relevant) or they don't (in which case we'll process the target sooner or
+    // later anyway)
     if p.is_symlink() {
         return;
     }
