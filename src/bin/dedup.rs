@@ -72,6 +72,7 @@ fn dir(d: &Path) {
             |_| panic!("Can't read entry from directory {:?}", d));
         let path = entry.path();
 
+        // FIXME the overhead is too large, use a thread pool or something
         // start thread
         let p = path.to_path_buf();
         let handle = thread::spawn(move || dispatch(&p));
@@ -109,6 +110,13 @@ fn dispatch(p: &Path) {
     }
 }
 
+fn start(p: &Path) {
+    /// initializes the thread pool and starts traversion
+    let threadpool: Vec<thread::JoinHandle<()>> = Vec::new();
+    // TODO
+    dispatch(p);
+}
+
 fn main() {
 
     // process all arguments
@@ -117,7 +125,7 @@ fn main() {
     loop {
         match args.next() {
             // arg is either a file or a dir to recurse into
-            Some(arg) => dispatch(&Path::new(&arg)),
+            Some(arg) => start(&Path::new(&arg)),
             None => break,
         };
         processed += 1;
